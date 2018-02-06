@@ -22,7 +22,6 @@ pub struct ImageDesc {
     pub yres: f64,
 }
 
-
 fn complex_rgb(z: Complex64) -> Rgb<u8> {
     let theta = z.arg();
     let r2 = z.norm_sqr();
