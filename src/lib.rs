@@ -22,10 +22,7 @@ pub struct ImageDesc {
     pub yres: f64,
 }
 
-fn complex_rgb(z: Complex64) -> Rgb<u8> {
-    let theta = z.arg();
-    let r2 = z.norm_sqr();
-
+fn complex_polar2_rgb(r2: f64, theta: f64) -> Rgb<u8> {
     let h = 3.0 + theta * 3.0 / PI;
     let s = 1.0;
     let l;
@@ -35,19 +32,24 @@ fn complex_rgb(z: Complex64) -> Rgb<u8> {
     else {
         l = r2 / (r2 + 1.0);
     }
+    return hsl_to_rgb(h, s, l);
+}
 
+fn complex_polar_rgb(r: f64, theta: f64) -> Rgb<u8> {
+    return complex_polar2_rgb(r * r, theta);
+}
 
+fn hsl_to_rgb(h: f64, s: f64, l: f64) -> Rgb<u8> {
     let mut c0 = (1.0 - f64::abs(2.0 * l - 1.0)) * s;
     let m = l - 0.5 * c0;
     let scale = f64::abs(h % 2.0 - 1.0);
     let mut c1 = c0 * scale;
     c0 += m;
     c1 += m;
+    let c2 = m;
 
     if c0 >= 1.0 { c0 = 0.999; }
     if c1 >= 1.0 { c1 = 0.999; }
-    // let c2 = c(norm(radius / (sat + 1.0)), s);
-    let c2 = m;
 
     let vals: [f64;3];
     match h as u8 % 6 {
@@ -64,6 +66,12 @@ fn complex_rgb(z: Complex64) -> Rgb<u8> {
         ret[i] = (256.0 * vals[i]) as u8;
     }
     return Rgb(ret);
+}
+
+fn complex_rgb(z: Complex64) -> Rgb<u8> {
+    let theta = z.arg();
+    let r2 = z.norm_sqr();
+    return complex_polar_rgb(r2, theta);
 }
 
 pub fn complex_spectrum(i: &ImageDesc, f: &Fn(Complex64) -> Complex64, imgname: &str) {

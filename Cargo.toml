@@ -1,6 +1,6 @@
 [package]
 name = "complex-spectrum"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["xPMo <PMo_@vivaldi.net>"]
 
 [dependencies]
