@@ -1,0 +1,9 @@
+[package]
+name = "complex-spectrum"
+version = "0.1.0"
+authors = ["xPMo <PMo_@vivaldi.net>"]
+
+[dependencies]
+image = "*"
+num-complex = "*"
+rayon = "*"
