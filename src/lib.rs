@@ -22,21 +22,26 @@ pub struct ImageDesc {
     pub yres: f64,
 }
 
-fn complex_polar2_rgb(r2: f64, theta: f64) -> Rgb<u8> {
+fn polar_no_norm_rgb(r: f64, theta: f64) -> Rgb<u8> {
     let h = 3.0 + theta * 3.0 / PI;
     let s = 1.0;
-    let l;
-    if r2 > (2 as u64).pow(15) as f64{
-        l = 255.875 / 256.0;
-    }
-    else {
-        l = r2 / (r2 + 1.0);
-    }
+    let l = r;
     return hsl_to_rgb(h, s, l);
 }
 
-fn complex_polar_rgb(r: f64, theta: f64) -> Rgb<u8> {
-    return complex_polar2_rgb(r * r, theta);
+fn polar2_norm_rgb(r2: f64, theta: f64) -> Rgb<u8> {
+    let r;
+    if r2 > (2 as u64).pow(15) as f64{
+        r = 255.875 / 256.0;
+    }
+    else {
+        r = r2 / (r2 + 1.0);
+    }
+    return polar_no_norm_rgb(r, theta);
+}
+
+fn polar_norm_rgb(r: f64, theta: f64) -> Rgb<u8> {
+    return polar2_norm_rgb(r * r, theta);
 }
 
 fn hsl_to_rgb(h: f64, s: f64, l: f64) -> Rgb<u8> {
@@ -68,10 +73,16 @@ fn hsl_to_rgb(h: f64, s: f64, l: f64) -> Rgb<u8> {
     return Rgb(ret);
 }
 
-fn complex_rgb(z: Complex64) -> Rgb<u8> {
+fn norm_rgb(z: Complex64) -> Rgb<u8> {
     let theta = z.arg();
     let r2 = z.norm_sqr();
-    return complex_polar_rgb(r2, theta);
+    return polar_norm_rgb(r2.sqrt().sqrt(), theta);
+}
+
+fn no_norm_rgb(z: Complex64) -> Rgb<u8> {
+    let theta = z.arg();
+    let r = z.norm();
+    return polar_no_norm_rgb(r, theta);
 }
 
 pub fn complex_spectrum(i: &ImageDesc, f: &Fn(Complex64) -> Complex64, imgname: &str) {
@@ -87,7 +98,7 @@ pub fn complex_spectrum(i: &ImageDesc, f: &Fn(Complex64) -> Complex64, imgname: 
         let cx = x as f64 * i.xres as f64 - xoffset;
         let z = Complex64::new(cx, cy);
 
-        *pixel = complex_rgb(f(z));
+        *pixel = norm_rgb(f(z));
     };
 
     // Iterate over the coordinates and pixels of the image
