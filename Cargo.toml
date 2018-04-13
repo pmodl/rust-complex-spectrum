@@ -1,5 +1,5 @@
 [package]
-name = "complex-spectrum"
+name = "domain-coloring"
 version = "0.1.2"
 authors = ["xPMo <PMo_@vivaldi.net>"]
 
