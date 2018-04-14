@@ -30,6 +30,7 @@ pub enum LightnessAlg {
     ModFrac,
     No,
 }
+use LightnessAlg::*;
 
 fn angle_to_hue(theta: f64) -> f64{
     return 3.0 + theta * 3.0 / PI;
@@ -41,18 +42,26 @@ pub trait PixelGenerator {
 
 impl PixelGenerator for LightnessAlg {
     fn rgb_complex(&self, z: Complex64, repeat: &Option<&Fn(Complex64) -> f64>) -> Rgb<u8>{
-        use LightnessAlg::*;
         let r2 = z.norm_sqr();
         let l1 = match *self {
-            Exp     => 1.0 - (-r2.sqrt()).exp(),
-            Exp2    => 1.0 - (-r2.sqrt()).exp2(),
-            ModSq   => {
+            Exp     =>
+                if r2 > (2 as u64).pow(8) as f64{
+                    255.875 / 256.0
+                } else {
+                    1.0 - (-r2.sqrt()).exp()
+                },
+            Exp2    =>
+                if r2 > (2 as u64).pow(8) as f64{
+                    255.875 / 256.0
+                } else {
+                    1.0 - (-r2.sqrt()).exp2()
+                },
+            ModSq   =>
                 if r2 > (2 as u64).pow(15) as f64{
                     255.875 / 256.0
                 } else {
                     r2 / (r2 + 1.0)
-                }
-            },
+                },
             No      => 0.5,
             _       => 0.0
         };
