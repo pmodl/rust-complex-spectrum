@@ -36,14 +36,14 @@ fn angle_to_hue(theta: f64) -> f64{
 }
 
 pub trait PixelGenerator {
-    fn rgb_complex(&self, z: Complex64) -> Rgb<u8>;
+    fn rgb_complex(&self, z: Complex64, repeat: &Option<&Fn(Complex64) -> f64>) -> Rgb<u8>;
 }
 
 impl PixelGenerator for LightnessAlg {
-    fn rgb_complex(&self, z: Complex64) -> Rgb<u8>{
+    fn rgb_complex(&self, z: Complex64, repeat: &Option<&Fn(Complex64) -> f64>) -> Rgb<u8>{
         use LightnessAlg::*;
         let r2 = z.norm_sqr();
-        let l = match *self {
+        let l1 = match *self {
             Exp     => 1.0 - (-r2.sqrt()).exp(),
             Exp2    => 1.0 - (-r2.sqrt()).exp2(),
             ModSq   => {
@@ -53,14 +53,17 @@ impl PixelGenerator for LightnessAlg {
                     r2 / (r2 + 1.0)
                 }
             },
-            LogFrac => {
-                let a = r2.ln().fract();
-                if a.is_sign_positive() { a } else { 1.0 + a }
-            },
             No      => 0.5,
             _       => 0.0
         };
-        if l < 0.0 { println!("{}", l); }
+        let l = match *repeat {
+            None    => l1,
+            Some(f) => {
+                let l2 = f(z).fract();
+                if l2 > 0.0 { 0.8 * l1 + 0.2 * l2 }
+                else {0.8 * l1 + 0.2 + 0.2 * l2}
+            }
+        };
         return hsl_to_rgb(angle_to_hue(z.arg()), 1.0, l);
     }
 }
@@ -98,7 +101,8 @@ pub fn domain_color<T: PixelGenerator>(
     i: &ImageDesc,
     f: &Fn(Complex64) -> Complex64,
     imgname: &str,
-    method: T
+    method: T,
+    repeat: &Option<&Fn(Complex64) -> f64>
 ){
     let yoffset = i.height as f64 * i.yres / 2.0;
     let xoffset = i.width as f64 * i.xres / 2.0;
@@ -115,7 +119,7 @@ pub fn domain_color<T: PixelGenerator>(
         let cx = x as f64 * i.xres as f64 - xoffset;
         let z = Complex64::new(cx, cy);
 
-        *pixel = method.rgb_complex(z);
+        *pixel = method.rgb_complex(z, repeat);
     };
 
 
@@ -127,4 +131,12 @@ pub fn domain_color<T: PixelGenerator>(
 
     // We must indicate the image's color type and what format to save as
     image::ImageRgb8(imgbuf).save(fout, image::PNG).unwrap();
+}
+
+pub fn domain_color_simple(
+    i: &ImageDesc,
+    f: &Fn(Complex64) -> Complex64,
+    imgname: &str,
+) {
+    domain_color(i, f, imgname, Exp2, &None);
 }
