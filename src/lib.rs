@@ -126,7 +126,7 @@ pub fn domain_color<T: PixelGenerator>(
     let draw_pixel = |(x,y,pixel): (u32, u32, &mut Rgb<u8>)| {
         let cy = yoffset - y as f64 * i.yres as f64;
         let cx = x as f64 * i.xres as f64 - xoffset;
-        let z = Complex64::new(cx, cy);
+        let z = f(Complex64::new(cx, cy));
 
         *pixel = method.rgb_complex(z, repeat);
     };
