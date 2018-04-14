@@ -22,26 +22,47 @@ pub struct ImageDesc {
     pub yres: f64,
 }
 
-fn polar_no_norm_rgb(r: f64, theta: f64) -> Rgb<u8> {
-    let h = 3.0 + theta * 3.0 / PI;
-    let s = 1.0;
-    let l = r;
-    return hsl_to_rgb(h, s, l);
+pub enum LightnessAlg {
+    Exp,
+    Exp2,
+    LogFrac,
+    ModSq,
+    ModFrac,
+    No,
 }
 
-fn polar2_norm_rgb(r2: f64, theta: f64) -> Rgb<u8> {
-    let r;
-    if r2 > (2 as u64).pow(15) as f64{
-        r = 255.875 / 256.0;
-    }
-    else {
-        r = r2 / (r2 + 1.0);
-    }
-    return polar_no_norm_rgb(r, theta);
+fn angle_to_hue(theta: f64) -> f64{
+    return 3.0 + theta * 3.0 / PI;
 }
 
-fn polar_norm_rgb(r: f64, theta: f64) -> Rgb<u8> {
-    return polar2_norm_rgb(r * r, theta);
+pub trait PixelGenerator {
+    fn rgb_complex(&self, z: Complex64) -> Rgb<u8>;
+}
+
+impl PixelGenerator for LightnessAlg {
+    fn rgb_complex(&self, z: Complex64) -> Rgb<u8>{
+        use LightnessAlg::*;
+        let r2 = z.norm_sqr();
+        let l = match *self {
+            Exp     => 1.0 - (-r2.sqrt()).exp(),
+            Exp2    => 1.0 - (-r2.sqrt()).exp2(),
+            ModSq   => {
+                if r2 > (2 as u64).pow(15) as f64{
+                    255.875 / 256.0
+                } else {
+                    r2 / (r2 + 1.0)
+                }
+            },
+            LogFrac => {
+                let a = r2.ln().fract();
+                if a.is_sign_positive() { a } else { 1.0 + a }
+            },
+            No      => 0.5,
+            _       => 0.0
+        };
+        if l < 0.0 { println!("{}", l); }
+        return hsl_to_rgb(angle_to_hue(z.arg()), 1.0, l);
+    }
 }
 
 fn hsl_to_rgb(h: f64, s: f64, l: f64) -> Rgb<u8> {
@@ -73,37 +94,33 @@ fn hsl_to_rgb(h: f64, s: f64, l: f64) -> Rgb<u8> {
     return Rgb(ret);
 }
 
-fn norm_rgb(z: Complex64) -> Rgb<u8> {
-    let theta = z.arg();
-    let r2 = z.norm_sqr();
-    return polar_norm_rgb(r2.sqrt().sqrt(), theta);
-}
-
-fn no_norm_rgb(z: Complex64) -> Rgb<u8> {
-    let theta = z.arg();
-    let r = z.norm();
-    return polar_no_norm_rgb(r, theta);
-}
-
-pub fn complex_spectrum(i: &ImageDesc, f: &Fn(Complex64) -> Complex64, imgname: &str) {
-
+pub fn domain_color<T: PixelGenerator>(
+    i: &ImageDesc,
+    f: &Fn(Complex64) -> Complex64,
+    imgname: &str,
+    method: T
+){
     let yoffset = i.height as f64 * i.yres / 2.0;
     let xoffset = i.width as f64 * i.xres / 2.0;
 
     // Create a new ImgBuf with width: imgx and height: imgy
     let mut imgbuf = image::ImageBuffer::new(i.width, i.height);
 
-    let draw_pixel = |(x, y, pixel): (u32, u32, &mut Rgb<u8>)| {
+
+    // match method
+
+
+    let draw_pixel = |(x,y,pixel): (u32, u32, &mut Rgb<u8>)| {
         let cy = yoffset - y as f64 * i.yres as f64;
         let cx = x as f64 * i.xres as f64 - xoffset;
         let z = Complex64::new(cx, cy);
 
-        *pixel = norm_rgb(f(z));
+        *pixel = method.rgb_complex(z);
     };
 
+
     // Iterate over the coordinates and pixels of the image
-    imgbuf.enumerate_pixels_mut()
-        .for_each(draw_pixel);
+    imgbuf.enumerate_pixels_mut().for_each(draw_pixel);
 
     // Save the image as "imgname"
     let ref mut fout = File::create(imgname).unwrap();
