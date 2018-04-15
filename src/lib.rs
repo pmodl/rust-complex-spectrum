@@ -9,9 +9,20 @@ use std::f64::consts::PI;
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn vectors() {
+        let zero = Complex64::new(0.0, 0.0);
+        let one = Complex64::new(1.0, 0.0);
+        let z = Complex64::new(2.0, 1.0);
+
+        // f(z) = 0
+        let f1 = Vec::new();
+        // f(z) = 2 z^2 + z + 1
+        let f2 = vec![one, one, 2.0 * one];
+        assert_eq!(f1.eval_at(z), zero);
+        assert_eq!(f2.eval_at(z), Complex64::new(9.0, 9.0));
     }
 }
 
@@ -40,28 +51,34 @@ pub trait PixelGenerator {
     fn rgb_complex(&self, z: Complex64, repeat: &Option<&Fn(Complex64) -> f64>) -> Rgb<u8>;
 }
 
+pub trait ComplexFunction {
+    fn eval_at(&self, z: Complex64) -> Complex64;
+}
+
+// Treat vectors as polynomial functions
+impl ComplexFunction for Vec<Complex64> {
+    fn eval_at(&self, z: Complex64) -> Complex64 {
+        let mut sum = Complex64::new(0.0, 0.0);
+        let mut zn = Complex64::new(1.0, 0.0);
+        for val in self {
+            sum += zn * val;
+            zn *= z;
+        }
+        return sum;
+    }
+}
+
+impl ComplexFunction for Fn(Complex64) -> Complex64 {
+    fn eval_at(&self, z: Complex64) -> Complex64 { self(z) }
+}
+
 impl PixelGenerator for LightnessAlg {
     fn rgb_complex(&self, z: Complex64, repeat: &Option<&Fn(Complex64) -> f64>) -> Rgb<u8>{
         let r2 = z.norm_sqr();
         let l1 = match *self {
-            Exp     =>
-                if r2 > (2 as u64).pow(8) as f64{
-                    255.875 / 256.0
-                } else {
-                    1.0 - (-r2.sqrt()).exp()
-                },
-            Exp2    =>
-                if r2 > (2 as u64).pow(8) as f64{
-                    255.875 / 256.0
-                } else {
-                    1.0 - (-r2.sqrt()).exp2()
-                },
-            ModSq   =>
-                if r2 > (2 as u64).pow(15) as f64{
-                    255.875 / 256.0
-                } else {
-                    r2 / (r2 + 1.0)
-                },
+            Exp     => 1.0 - (-r2.sqrt()).exp(),
+            Exp2    => 1.0 - (-r2.sqrt()).exp2(),
+            ModSq   => r2 / (r2 + 1.0),
             No      => 0.5,
             _       => 0.0
         };
@@ -78,8 +95,9 @@ impl PixelGenerator for LightnessAlg {
 }
 
 fn hsl_to_rgb(h: f64, s: f64, l: f64) -> Rgb<u8> {
-    let mut c0 = (1.0 - f64::abs(2.0 * l - 1.0)) * s;
-    let m = l - 0.5 * c0;
+    let l_capped = if l > 0.999 { 0.999 } else { l };
+    let mut c0 = (1.0 - f64::abs(2.0 * l_capped - 1.0)) * s;
+    let m = l_capped - 0.5 * c0;
     let scale = f64::abs(h % 2.0 - 1.0);
     let mut c1 = c0 * scale;
     c0 += m;
@@ -118,10 +136,6 @@ pub fn domain_color<T: PixelGenerator>(
 
     // Create a new ImgBuf with width: imgx and height: imgy
     let mut imgbuf = image::ImageBuffer::new(i.width, i.height);
-
-
-    // match method
-
 
     let draw_pixel = |(x,y,pixel): (u32, u32, &mut Rgb<u8>)| {
         let cy = yoffset - y as f64 * i.yres as f64;
