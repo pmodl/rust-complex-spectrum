@@ -21,7 +21,7 @@ mod tests {
         let f1 = Vec::new();
         // f(z) = 2 z^2 + z + 1
         let f2 = vec![one, one, 2.0 * one];
-        assert_eq!(f1.eval_at(z), zero);
+        assert_eq!(f2.eval_at(z), zero);
         assert_eq!(f2.eval_at(z), Complex64::new(9.0, 9.0));
     }
 }
@@ -55,18 +55,40 @@ pub trait ComplexFunction {
     fn eval_at(&self, z: Complex64) -> Complex64;
 }
 
-// Treat vectors as polynomial functions
-impl ComplexFunction for Vec<Complex64> {
+// Treat as a list of terms of a polynomial
+pub struct C64Terms(pub Vec<Complex64>);
+impl ComplexFunction for C64Terms {
     fn eval_at(&self, z: Complex64) -> Complex64 {
         let mut sum = Complex64::new(0.0, 0.0);
         let mut zn = Complex64::new(1.0, 0.0);
-        for val in self {
+        for val in &self.0 {
             sum += zn * val;
             zn *= z;
         }
         return sum;
     }
 }
+
+// Treat as a list of roots of a polynomial
+pub struct C64Roots(pub Vec<Complex64>);
+impl ComplexFunction for C64Roots {
+    fn eval_at(&self, z: Complex64) -> Complex64 {
+        let mut prod = Complex64::new(1.0, 0.0);
+        for val in &self.0 {
+            prod *= z - val;
+        }
+        return prod;
+    }
+}
+
+// Roots of unity
+pub struct C64Unity(pub usize);
+impl ComplexFunction for C64Unity {
+    fn eval_at(&self, z:Complex64) -> Complex64 {
+        z.powf(self.0 as f64) - 1.0
+    }
+}
+
 
 impl ComplexFunction for Fn(Complex64) -> Complex64 {
     fn eval_at(&self, z: Complex64) -> Complex64 { self(z) }
