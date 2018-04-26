@@ -167,15 +167,11 @@ pub fn domain_color<T: PixelGenerator>(
         *pixel = method.rgb_complex(z, repeat);
     };
 
-
     // Iterate over the coordinates and pixels of the image
     imgbuf.enumerate_pixels_mut().for_each(draw_pixel);
 
-    // Save the image as "imgname"
-    let ref mut fout = File::create(imgname).unwrap();
-
     // We must indicate the image's color type and what format to save as
-    image::ImageRgb8(imgbuf).save(fout, image::PNG).unwrap();
+    image::ImageRgb8(imgbuf).save(imgname).unwrap();
 }
 
 pub fn domain_color_simple(
