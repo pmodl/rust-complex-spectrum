@@ -18,10 +18,10 @@ mod tests {
         let z = Complex64::new(2.0, 1.0);
 
         // f(z) = 0
-        let f1 = Vec::new();
+        let f1 = C64Terms(Vec::new());
         // f(z) = 2 z^2 + z + 1
-        let f2 = vec![one, one, 2.0 * one];
-        assert_eq!(f2.eval_at(z), zero);
+        let f2 = C64Terms(vec![one, one, 2.0 * one]);
+        assert_eq!(f1.eval_at(z), zero);
         assert_eq!(f2.eval_at(z), Complex64::new(9.0, 9.0));
     }
 }
