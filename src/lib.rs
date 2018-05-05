@@ -26,6 +26,7 @@ mod tests {
     }
 }
 
+#[derive(Debug)]
 pub struct ImageDesc {
     pub width: u32,
     pub height: u32,
@@ -33,6 +34,7 @@ pub struct ImageDesc {
     pub yres: f64,
 }
 
+#[derive(Debug)]
 pub enum LightnessAlg {
     Exp,
     Exp2,
