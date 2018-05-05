@@ -58,6 +58,7 @@ pub trait ComplexFunction {
 }
 
 // Treat as a list of terms of a polynomial
+#[derive(Debug)]
 pub struct C64Terms(pub Vec<Complex64>);
 impl ComplexFunction for C64Terms {
     fn eval_at(&self, z: Complex64) -> Complex64 {
@@ -72,6 +73,7 @@ impl ComplexFunction for C64Terms {
 }
 
 // Treat as a list of roots of a polynomial
+#[derive(Debug)]
 pub struct C64Roots(pub Vec<Complex64>);
 impl ComplexFunction for C64Roots {
     fn eval_at(&self, z: Complex64) -> Complex64 {
@@ -84,13 +86,13 @@ impl ComplexFunction for C64Roots {
 }
 
 // Roots of unity
+#[derive(Debug)]
 pub struct C64Unity(pub usize);
 impl ComplexFunction for C64Unity {
     fn eval_at(&self, z:Complex64) -> Complex64 {
         z.powf(self.0 as f64) - 1.0
     }
 }
-
 
 impl ComplexFunction for Fn(Complex64) -> Complex64 {
     fn eval_at(&self, z: Complex64) -> Complex64 { self(z) }
