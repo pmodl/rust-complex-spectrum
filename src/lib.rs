@@ -3,9 +3,9 @@ extern crate num_complex;
 extern crate rayon;
 //use rayon::prelude::*;
 use image::*;
-use num_complex::{Complex64};
-use std::fs::File;
+use num_complex::Complex64;
 use std::f64::consts::PI;
+use std::fs::File;
 
 #[cfg(test)]
 mod tests {
@@ -45,7 +45,7 @@ pub enum LightnessAlg {
 }
 use LightnessAlg::*;
 
-fn angle_to_hue(theta: f64) -> f64{
+fn angle_to_hue(theta: f64) -> f64 {
     return 3.0 + theta * 3.0 / PI;
 }
 
@@ -89,31 +89,36 @@ impl ComplexFunction for C64Roots {
 #[derive(Debug)]
 pub struct C64Unity(pub usize);
 impl ComplexFunction for C64Unity {
-    fn eval_at(&self, z:Complex64) -> Complex64 {
+    fn eval_at(&self, z: Complex64) -> Complex64 {
         z.powf(self.0 as f64) - 1.0
     }
 }
 
 impl ComplexFunction for Fn(Complex64) -> Complex64 {
-    fn eval_at(&self, z: Complex64) -> Complex64 { self(z) }
+    fn eval_at(&self, z: Complex64) -> Complex64 {
+        self(z)
+    }
 }
 
 impl PixelGenerator for LightnessAlg {
-    fn rgb_complex(&self, z: Complex64, repeat: &Option<&Fn(Complex64) -> f64>) -> Rgb<u8>{
+    fn rgb_complex(&self, z: Complex64, repeat: &Option<&Fn(Complex64) -> f64>) -> Rgb<u8> {
         let r2 = z.norm_sqr();
         let l1 = match *self {
-            Exp     => 1.0 - (-r2.sqrt()).exp(),
-            Exp2    => 1.0 - (-r2.sqrt()).exp2(),
-            ModSq   => r2 / (r2 + 1.0),
-            No      => 0.5,
-            _       => 0.0
+            Exp => 1.0 - (-r2.sqrt()).exp(),
+            Exp2 => 1.0 - (-r2.sqrt()).exp2(),
+            ModSq => r2 / (r2 + 1.0),
+            No => 0.5,
+            _ => 0.0,
         };
         let l = match *repeat {
-            None    => l1,
+            None => l1,
             Some(f) => {
                 let l2 = f(z).fract();
-                if l2 > 0.0 { 0.8 * l1 + 0.2 * l2 }
-                else {0.8 * l1 + 0.2 + 0.2 * l2}
+                if l2 > 0.0 {
+                    0.8 * l1 + 0.2 * l2
+                } else {
+                    0.8 * l1 + 0.2 + 0.2 * l2
+                }
             }
         };
         return hsl_to_rgb(angle_to_hue(z.arg()), 1.0, l);
@@ -130,10 +135,14 @@ fn hsl_to_rgb(h: f64, s: f64, l: f64) -> Rgb<u8> {
     c1 += m;
     let c2 = m;
 
-    if c0 >= 1.0 { c0 = 0.999; }
-    if c1 >= 1.0 { c1 = 0.999; }
+    if c0 >= 1.0 {
+        c0 = 0.999;
+    }
+    if c1 >= 1.0 {
+        c1 = 0.999;
+    }
 
-    let vals: [f64;3];
+    let vals: [f64; 3];
     match h as u8 % 6 {
         3 => vals = [c0, c1, c2],
         4 => vals = [c1, c0, c2],
@@ -143,7 +152,7 @@ fn hsl_to_rgb(h: f64, s: f64, l: f64) -> Rgb<u8> {
         2 => vals = [c0, c2, c1],
         _ => vals = [0.0, 0.0, 0.0],
     };
-    let mut ret: [u8;3] = [0, 0, 0];
+    let mut ret: [u8; 3] = [0, 0, 0];
     for i in 0..3 {
         ret[i] = (256.0 * vals[i]) as u8;
     }
@@ -155,15 +164,15 @@ pub fn domain_color<T: PixelGenerator>(
     f: &Fn(Complex64) -> Complex64,
     imgname: &str,
     method: T,
-    repeat: &Option<&Fn(Complex64) -> f64>
-){
+    repeat: &Option<&Fn(Complex64) -> f64>,
+) {
     let yoffset = i.height as f64 * i.yres / 2.0;
     let xoffset = i.width as f64 * i.xres / 2.0;
 
     // Create a new ImgBuf with width: imgx and height: imgy
     let mut imgbuf = image::ImageBuffer::new(i.width, i.height);
 
-    let draw_pixel = |(x,y,pixel): (u32, u32, &mut Rgb<u8>)| {
+    let draw_pixel = |(x, y, pixel): (u32, u32, &mut Rgb<u8>)| {
         let cy = yoffset - y as f64 * i.yres as f64;
         let cx = x as f64 * i.xres as f64 - xoffset;
         let z = f(Complex64::new(cx, cy));
@@ -178,10 +187,6 @@ pub fn domain_color<T: PixelGenerator>(
     image::ImageRgb8(imgbuf).save(imgname).unwrap();
 }
 
-pub fn domain_color_simple(
-    i: &ImageDesc,
-    f: &Fn(Complex64) -> Complex64,
-    imgname: &str,
-) {
+pub fn domain_color_simple(i: &ImageDesc, f: &Fn(Complex64) -> Complex64, imgname: &str) {
     domain_color(i, f, imgname, Exp2, &None);
 }
